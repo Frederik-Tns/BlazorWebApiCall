@@ -1,0 +1,106 @@
+﻿@page "/weather"
+@inject WeatherService WeatherService
+@inject NavigationManager navigationManager
+
+<h3>Weather Information</h3>
+
+<!-- Search Box -->
+<div>
+    <input type="text" @bind="searchCity" placeholder="Enter city name" />
+    <button @onclick="SearchCityWeather">Search</button>
+</div>
+
+@if (loading)
+{
+    <p>Loading weather data...</p>
+}
+else if (error)
+{
+    <p>Unable to fetch weather data. Please try again later.</p>
+}
+else
+{
+    <ul>
+        @if (!string.IsNullOrEmpty(searchCityWeather?.Location?.Name))
+        {
+            <li>
+                <strong>@searchCityWeather.Location.Name (@searchCityWeather.Location.Country):</strong>
+                @searchCityWeather.Current.TemperatureCelsius°C, @searchCityWeather.Current.Condition.Text
+            </li>
+        }
+
+        @foreach (var weather in weatherData)
+        {
+            <li>
+                <strong>@weather?.Location?.Name (@weather?.Location?.Country):</strong>
+                @weather?.Current?.TemperatureCelsius°C, @weather?.Current?.Condition?.Text
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    // Predefined list of cities
+    private List<string> cities = new()
+    {
+        "London", "Paris", "New York", "Tokyo", "Sydney",
+        "Berlin", "Moscow", "Mumbai", "Cape Town", "Beijing",
+        "Rio de Janeiro", "Cairo", "Toronto", "Dubai", "Los Angeles"
+    };
+
+    private List<WeatherForecast?> weatherData = new();
+    private WeatherForecast? searchCityWeather;
+    private string searchCity = string.Empty;
+
+    private bool loading = true;
+    private bool error = false;
+
+    // Load predefined cities on initialization
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            foreach (var city in cities)
+            {
+                var weather = await WeatherService.GetWeatherAsync(city);
+                if (weather != null)
+                {
+                    weatherData.Add(weather);
+                }
+            }
+        }
+        catch
+        {
+            error = true;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    // Fetch weather for the searched city
+    private async Task SearchCityWeather()
+    {
+        if (string.IsNullOrWhiteSpace(searchCity))
+            return;
+
+        loading = true;
+        error = false;
+
+        try
+        {
+            searchCityWeather = await WeatherService.GetWeatherAsync(searchCity);
+        }
+        catch
+        {
+            error = true;
+            searchCityWeather = null;
+        }
+        finally
+        {
+            loading = false;
+        }
+        navigationManager.();
+    }
+}
